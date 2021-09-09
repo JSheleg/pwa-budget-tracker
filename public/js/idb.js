@@ -21,7 +21,7 @@ request.onsuccess = function(event){
 
     //check if app is online, if yes run uploadBudget() function to send all local db data to api
     if(navigator.onLine){
-        //uploadBudget();
+        uploadPending();
     }
 };
 
@@ -46,3 +46,52 @@ function saveRecord(record) {
     // add record to your store with add method
     store.add(record);
 }
+
+function uploadPending(){
+    //open a transaction on your db
+    const transaction = db.transaction(['pending'], 'readwrite');
+    
+    //access your object store
+    const store = transaction.objectStore('pending');
+
+    //get all records from store and set to a variable
+    const getAll = store.getAll();
+
+    //upond a successful .getAll() execution, run this function
+    getAll.onsuccess = function(){
+        //if there is data in indexDB, send to api server
+        if(getAll.result.length > 0) {
+            fetch('/api/transaction/bulk', {
+                method: "POST",
+                body: JSON.stringify(getAll.result),
+                headers: {
+                    Accept: "application/json, text/plain, */*",
+                    'Content-Type': 'application/json'
+                }
+            })
+
+                .then(response => response.json())
+                .then(serverResponse => {
+                    if(serverResponse.message) {
+                        throw new Error(serverResponse);
+                    }
+                    //open one more transaction
+                    const transaction = db.transaction (['pending'], 'readwrite');
+
+                    //access the pending object store
+                    const store = transaction.objectStore('pending')
+
+                    //clear all items in store
+                    store.clear();
+
+                    alert("All pending transactions have been submitted!");
+                })
+                .catch(err => {
+                    console.log(err);
+                });
+        }
+    }
+}
+
+// //listen for app coming back online
+// window.addEventListener('online', uploadPending);
