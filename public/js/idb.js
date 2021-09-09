@@ -94,4 +94,4 @@ function uploadPending(){
 }
 
 // //listen for app coming back online
-// window.addEventListener('online', uploadPending);
+window.addEventListener('online', uploadPending);
